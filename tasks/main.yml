@@ -1,0 +1,24 @@
+- include: firewall.yml
+- include: etcd_cmd.yml
+
+- name: run the etcd container
+  docker_container:
+    name: etcd
+    image: quay.io/coreos/etcd
+    state: started
+    recreate: yes
+    restart: yes
+    force_kill: yes
+    exposed_ports:
+      - "4001"
+      - "2380"
+      - "2379"
+    published_ports:
+      - "4001:4001"
+      - "2380:2380"
+      - "2379:2379"
+    command: >
+      etcd {{ initial_cluster.stdout }}
+    restart_policy: always
+    labels: 
+      SYSTEM_CONTAINER: "true"

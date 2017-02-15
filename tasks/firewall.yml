@@ -1,0 +1,29 @@
+---
+- name: Remove the etcd chain
+  shell: >
+    ( iptables -t filter -D INPUT -j ETCD &&
+      iptables -t filter -F ETCD &&
+      iptables -t filter -X ETCD) || true
+
+- name: Create the shipyard chain
+  shell: iptables -t filter -N ETCD && iptables -t filter -I INPUT 1 -j ETCD
+
+- name: Open port for etcd communication on iptables
+  iptables:
+    table: filter
+    chain: ETCD
+    destination_port: "{{ item.port }}"
+    protocol: "{{ item.proto }}"
+    state: present
+    jump: ACCEPT
+    comment: "etcd for port {{ item.port }}/{{ item.proto }}"
+  with_items:
+    - proto: tcp
+      port: 4001
+    - proto: tcp
+      port: 2380
+    - proto: tcp
+      port: 2379
+
+- name: Iptables save
+  shell: iptables-save > "{{ iptables_config }}"

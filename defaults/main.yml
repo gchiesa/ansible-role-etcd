@@ -1,0 +1,5 @@
+---
+# defaults file for ansible-role-etcd
+
+# iptable configuration file
+iptables_config: "/etc/sysconfig/iptables"

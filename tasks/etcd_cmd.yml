@@ -1,0 +1,38 @@
+---
+# tasks file for ansible-role-etcd
+- name: Allocate the nodes ip list
+  shell: |
+    echo "{{ iputils_ip_external }}" > /tmp/initial_cluster.list
+  when:
+    - inventory_hostname in groups['etcd_cluster']
+
+- name: Allocate the peers ip list (natted)
+  shell: |
+    IP=$(host {{ item }} | awk '{print $(NF)}');
+    echo "$IP" >> /tmp/initial_cluster.list
+  with_items:
+    - "{{ groups['etcd_cluster'] }}"
+  when:
+    - inventory_hostname != item
+    - host_natted|bool
+
+- name: Allocate the peers ip list 
+  shell: |
+    IP=$(getent ahostsv4  {{ item }}| grep -v '127.0' | grep 'STREAM' | awk '{print $1}');
+    echo "$IP" >> /tmp/initial_cluster.list
+  with_items:
+    - "{{ groups['etcd_cluster'] }}"
+  when:
+    - inventory_hostname != item
+    - (host_natted is undefined) or (host_natted|bool == False)
+
+- name: Copy the etcd command generation script
+  copy:
+    src: "{{ role_path }}/files/etcd_cmd.py"
+    dest: /tmp/etcd_cmd.py
+    mode: "u=rwx"
+
+- name: Calculate the initial cluster argument
+  shell:
+    /tmp/etcd_cmd.py  /tmp/initial_cluster.list {{ iputils_ip_external }}
+  register: initial_cluster
